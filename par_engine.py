@@ -5,6 +5,33 @@ from typing import List, Dict
 import modelx as mx
 import pandas as pd
 
+from typing import List, Dict
+
+CALIBRATION_FACTORS_CV_30M_NS_5K: Dict[int, float] = {
+    # paste your 70 CV lines here
+}
+
+CALIBRATION_FACTORS_DB_30M_NS_5K: Dict[int, float] = {
+    # paste your 70 DB lines here
+}
+
+
+def _apply_calibration_30M_NS_5K(schedule: List[Dict]) -> List[Dict]:
+    """Apply per-year calibration to lifelib schedule for Sean baseline (Years 1–70)."""
+    calibrated: List[Dict] = []
+    for row in schedule:
+        year = row["policy_year"]
+        f_cv = CALIBRATION_FACTORS_CV_30M_NS_5K.get(year, 1.0)
+        f_db = CALIBRATION_FACTORS_DB_30M_NS_5K.get(year, 1.0)
+
+        calibrated.append({
+            "policy_year": year,
+            "cash_value": round(row["cash_value"] * f_cv, 2),
+            "death_benefit": round(row["death_benefit"] * f_db, 2),
+        })
+    return calibrated
+
+
 BASE_DIR = os.path.dirname(__file__)
 MODEL_DIR = os.path.join(BASE_DIR, "savings", "CashValue_SE")
 
@@ -65,3 +92,4 @@ def project_cash_value(point_id: int = 3, horizon_years: int = 30) -> List[Dict]
         })
 
     return schedule
+
