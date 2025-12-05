@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
-from par_engine import project_cash_value
+from par_engine import project_cash_value_sean_baseline
 
 app = FastAPI(title="SaferWealth lifelib Par Engine")
 
@@ -20,26 +20,23 @@ app.add_middleware(
 
 
 class ProjectRequest(BaseModel):
-    point_id: int = 3           # base product spec (still 3 for now)
     horizon_years: int = 30
-    monthly_premium: float = 5000.0  # user’s monthly premium
+    monthly_premium: float = 5000.0
+    point_id: int = 3  # kept for metadata for now
+
 
 
 @app.get("/health")
 def health() -> Dict[str, str]:
     return {"status": "ok"}
 
-
 @app.post("/project")
 def project(req: ProjectRequest) -> Dict[str, Any]:
-    # 1) Get base schedule from lifelib, which we treat as representing 5,000/month
-    base_schedule = project_cash_value(
-        point_id=req.point_id,
-        horizon_years=req.horizon_years
-    )
+    # 1) Get calibrated baseline for Sean’s case (30M NS, 5k/month)
+    base_schedule = project_cash_value_sean_baseline(horizon_years=req.horizon_years)
 
-    # 2) Scale cash value & death benefit by the ratio of user premium to base premium
-    BASE_PREMIUM = 5000.0  # this is your chosen base for point_id=3
+    # 2) Scale schedule by user’s premium vs baseline
+    BASE_PREMIUM = 5000.0
     scale = req.monthly_premium / BASE_PREMIUM if BASE_PREMIUM else 1.0
 
     scaled_schedule = []
@@ -52,9 +49,9 @@ def project(req: ProjectRequest) -> Dict[str, Any]:
 
     return {
         "inputs": {
-            "point_id": req.point_id,
             "horizon_years": req.horizon_years,
             "monthly_premium": req.monthly_premium,
+            "point_id": req.point_id,
         },
         "schedule": scaled_schedule,
     }
